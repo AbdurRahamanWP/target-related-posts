@@ -23,24 +23,53 @@ class target_related_posts{
     add_filter( 'the_content', array( $this, 'the_content_for_related_posts' ) ); 
 
     }
+        public function the_content_for_related_posts($content) {
+            if (!is_single() || !in_the_loop()) {
+                return $content;
+            }
 
-    function the_content_for_related_posts( $content ){
-        global $post;
+            $categories = get_the_category();
+            if (empty($categories)) {
+                return $content;
+            }
 
-        if ( ! is_singular( 'post' ) ) {
-            return $contents;
+            $category_ids = array_map(function ($category) {
+                return $category->term_id;
+            }, $categories);
+
+            $query_args = [
+                'category__in' => $category_ids,
+                'post__not_in' => [get_the_ID()],
+                'posts_per_page' => 5,
+                'orderby' => 'rand',
+            ];
+            
+            $related_posts = new WP_Query($query_args);
+
+            ob_start();
+
+            if ($related_posts->have_posts()) {
+            ?>
+                <h3>Related Posts:</h3>
+            <?php 
+                while ($related_posts->have_posts()) {
+                    $related_posts->the_post();
+                ?>    
+                <div class="title">
+                        <div class="title"> <a href="<?php  get_permalink(); ?>"> <?php echo the_title(); ?> </a></div>
+                        <div class="Thumbnail">  <?php  the_post_thumbnail( 'thumbnail' );  ?> </div>
+                        <div class="content">  <?php echo wp_trim_words(get_the_content(), 20, '...');  ?> </div>
+                </div>
+                <?php 
+                }
+    
+                wp_reset_postdata();
+            }
+            $html = ob_get_clean();
+            $content .= $html;
+            return $content;
         }
-        ob_start();
-        $tags = wp_get_post_tags($post->ID);
-        ?>
-         <h2><?php the_title();  ?></h2> 
-        
-        <?php
-        $html = ob_get_clean();
-        $content .= $html;
-
-        return $content;
     }
-}
+
 
 new target_related_posts();
